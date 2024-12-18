@@ -95,6 +95,85 @@ class EdenAI(Model):
             metrics.response_timer.stop()
             raise
 
+
+    def create_assistant_message(self, response: Dict[str, Any], metrics: Metrics) -> Message:
+        """
+        Create an assistant message from the EdenAI response.
+
+        Args:
+            response: EdenAI API response.
+            metrics: Metrics object for usage tracking.
+
+        Returns:
+            Message object containing the assistant message.
+        """
+        # Extract the response from the specified provider
+        provider_results = response.get("results", {})
+        provider_response = provider_results.get(self.id, {})
+        message_content = provider_response.get("message", {}).get("content", "")
+
+        # Extract and update usage metrics
+        usage_data = provider_response.get("usage", {})
+        assistant_message = Message(role="assistant", content=message_content)
+        self.update_usage_metrics(assistant_message, metrics, usage_data)
+
+        return assistant_message
+
+    def update_usage_metrics(
+        self, assistant_message: Message, metrics: Metrics, usage: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """
+        Update usage metrics for the assistant message.
+
+        Args:
+            assistant_message: Message object containing the response content.
+            metrics: Metrics object containing the usage metrics.
+            usage: Dict containing usage data.
+        """
+        assistant_message.metrics["time"] = metrics.response_timer.elapsed
+        self.metrics.setdefault("response_times", []).append(metrics.response_timer.elapsed)
+
+        if usage:
+            # EdenAI usage keys
+            metrics.input_tokens = usage.get("input_tokens", 0)
+            metrics.output_tokens = usage.get("output_tokens", 0)
+            metrics.total_tokens = usage.get("total_tokens", 0)
+
+            assistant_message.metrics["input_tokens"] = metrics.input_tokens
+            assistant_message.metrics["output_tokens"] = metrics.output_tokens
+            assistant_message.metrics["total_tokens"] = metrics.total_tokens
+
+            self.metrics["input_tokens"] = self.metrics.get("input_tokens", 0) + metrics.input_tokens
+            self.metrics["output_tokens"] = self.metrics.get("output_tokens", 0) + metrics.output_tokens
+            self.metrics["total_tokens"] = self.metrics.get("total_tokens", 0) + metrics.total_tokens
+
+    def update_usage_metrics(
+        self, assistant_message: Message, metrics: Metrics, usage: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """
+        Update usage metrics for the assistant message.
+
+        Args:
+            assistant_message: Message object containing the response content.
+            metrics: Metrics object containing the usage metrics.
+            usage: Dict containing usage data.
+        """
+        assistant_message.metrics["time"] = metrics.response_timer.elapsed
+        self.metrics.setdefault("response_times", []).append(metrics.response_timer.elapsed)
+
+        if usage:
+            # EdenAI usage keys
+            metrics.input_tokens = usage.get("input_tokens", 0)
+            metrics.output_tokens = usage.get("output_tokens", 0)
+            metrics.total_tokens = usage.get("total_tokens", 0)
+
+            assistant_message.metrics["input_tokens"] = metrics.input_tokens
+            assistant_message.metrics["output_tokens"] = metrics.output_tokens
+            assistant_message.metrics["total_tokens"] = metrics.total_tokens
+
+            self.metrics["input_tokens"] = self.metrics.get("input_tokens", 0) + metrics.input_tokens
+            self.metrics["output_tokens"] = self.metrics.get("output_tokens", 0) + metrics.output_tokens
+            self.metrics["total_tokens"] = self.metrics.get("total_tokens", 0) + metrics.total_tokens
     def response(self, messages: List[Message]) -> ModelResponse:
         """
         Send a generate content request to EdenAI and return the response.
