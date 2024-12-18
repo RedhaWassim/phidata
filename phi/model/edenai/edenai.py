@@ -36,11 +36,11 @@ class EdenAI(Model):
     Class for interacting with the EdenAI API.
     """
 
-    id: str = "openai/gpt-4"  # Default provider; dynamically updated by the user.
+    id: str = "openai/gpt-4"  
     name: str = "EdenAI"
     provider: str = "EdenAI"
 
-    api_key: str = getenv("EDENAI_API_KEY", None) # EdenAI API Key
+    api_key: str = getenv("EDENAI_API_KEY", None) 
     base_url: str = "https://api.edenai.run/v2/multimodal/chat"
 
     def format_messages(self, messages: List[Message]) -> List[Dict[str, Any]]:
@@ -71,7 +71,7 @@ class EdenAI(Model):
         """
         headers = {"Authorization": f"Bearer {self.api_key}"}
         payload = {
-            "providers": [self.id],  # Use the `id` as the provider choice
+            "providers": [self.id],  
             "messages": self.format_messages(messages),
         }
 
@@ -96,27 +96,26 @@ class EdenAI(Model):
             raise
 
 
-    def create_assistant_message(self, response: Dict[str, Any], metrics: Metrics) -> Message:
+    def create_assistant_message(
+            self,
+            response: str,
+            metrics: Metrics,
+            response_cost: Optional[float] = None,
+    ) -> Message:
         """
         Create an assistant message from the EdenAI response.
-
+    
         Args:
-            response: EdenAI API response.
+            response: The text response (e.g., `generated_text`).
             metrics: Metrics object for usage tracking.
-
+    
         Returns:
             Message object containing the assistant message.
         """
-        # Extract the response from the specified provider
-        provider_results = response.get("results", {})
-        provider_response = provider_results.get(self.id, {})
-        message_content = provider_response.get("message", {}).get("content", "")
-
-        # Extract and update usage metrics
-        usage_data = provider_response.get("usage", {})
-        assistant_message = Message(role="assistant", content=message_content)
+        usage_data = response_cost
+        assistant_message = Message(role="assistant", content=response) 
         self.update_usage_metrics(assistant_message, metrics, usage_data)
-
+    
         return assistant_message
 
     def update_usage_metrics(
@@ -134,7 +133,7 @@ class EdenAI(Model):
         self.metrics.setdefault("response_times", []).append(metrics.response_timer.elapsed)
 
         if usage:
-            # EdenAI usage keys
+            
             metrics.input_tokens = usage.get("input_tokens", 0)
             metrics.output_tokens = usage.get("output_tokens", 0)
             metrics.total_tokens = usage.get("total_tokens", 0)
@@ -162,7 +161,7 @@ class EdenAI(Model):
         self.metrics.setdefault("response_times", []).append(metrics.response_timer.elapsed)
 
         if usage:
-            # EdenAI usage keys
+           
             metrics.input_tokens = usage.get("input_tokens", 0)
             metrics.output_tokens = usage.get("output_tokens", 0)
             metrics.total_tokens = usage.get("total_tokens", 0)
@@ -185,30 +184,39 @@ class EdenAI(Model):
             ModelResponse: The model response.
         """
         logger.debug("---------- EdenAI Response Start ----------")
-        self._log_messages(messages)  # Log the messages being sent to EdenAI
+        self._log_messages(messages) 
+        model_response = ModelResponse()
         metrics = Metrics()
-    
-        # -*- Generate response
         metrics.response_timer.start()
+
         try:
-            raw_response = self.invoke(messages=messages)  # Get raw response from EdenAI
+            raw_response = self.invoke(messages=messages)  
             metrics.response_timer.stop()
         except Exception as e:
             logger.error(f"Error in EdenAI response: {e}")
             metrics.response_timer.stop()
             raise
+
+        # parse response
+        provider_response = raw_response.get(str(self.id), {}).get('generated_text', '')
+
+        logger.debug(f"Assistant Response: {provider_response}")
+
+        # create assistnat message
+        assistant_message = self.create_assistant_message(
+            response=provider_response,
+            metrics=metrics
+        )
+
+        messages.append(assistant_message)
+
         
-        # -*- Extract content from the raw response
-        provider_results = raw_response.get("results", {})
-        provider_response = provider_results.get(self.id, {})  # Get response for the specific provider
-        message_content = provider_response.get("message", {}).get("content", "")
-    
-        # -*- Log the response content
-        logger.debug(f"Assistant Response: {message_content}")
-    
-        # -*- Create and return ModelResponse
-        model_response = ModelResponse()
-        model_response.content = message_content  # Set the content
-        model_response.created_at = int(time())  # Update timestamp
+        assistant_message.log()
+        metrics.log()
+
+
+        if assistant_message.content is not None:
+            model_response.content = assistant_message.get_content_string()
+
+        logger.debug("---------- EdenAI Response End ----------")
         return model_response
-    

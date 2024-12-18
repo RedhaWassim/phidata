@@ -6,7 +6,6 @@ from phi.tools.yfinance import YFinanceTools
 agent = Agent(
     model=EdenAI(id="openai/gpt-4",markdown=True)
 )
-
 # Get the response in a variable
 # run: RunResponse = agent.run("What is the stock price of NVDA and TSLA")
 # print(run.content)
