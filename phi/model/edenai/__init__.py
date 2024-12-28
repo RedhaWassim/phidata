@@ -1,1 +1,1 @@
-from phi.model.edenai.edenai import EdenAI
+from phi.model.edenai.edenai import EdenAIChat
