@@ -66,6 +66,30 @@ class EdenAIChat(Model):
     api_key: Optional[str] = getenv("EDENAI_API_KEY", None) 
     base_url: str = "https://api.edenai.run/v2/text/chat"
 
+    temperature: Optional[float] = None
+    max_tokens: Optional[int] = None
+    top_k: Optional[int] = None
+    top_p: Optional[float] = None
+    fallback_providers: Optional[List[str]] = None
+    chatbot_global_action: Optional[str] = None
+
+
+    def _set_optional_params(self) -> Dict : 
+        optional_params = {}
+        if self.temperature is not None:
+            optional_params["temperature"] = self.temperature
+        if self.max_tokens is not None:
+            optional_params["max_tokens"] = self.max_tokens
+        if self.top_k is not None:
+            optional_params["top_k"] = self.top_k
+        if self.top_p is not None:
+            optional_params["top_p"] = self.top_p
+        if self.fallback_providers is not None:
+            optional_params["fallback_providers"] = self.fallback_providers
+        if self.chatbot_global_action is not None:
+            optional_params["chatbot_global_action"] = self.chatbot_global_action
+        return optional_params
+    
     def convert_tools_to_api_format(self, tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Convert the tools to the format expected by the EdenAI API.
@@ -88,6 +112,7 @@ class EdenAIChat(Model):
         messages: List[Message],
         model_response: ModelResponse,
         tool_role: str = "tool",
+
     ) -> Optional[ModelResponse]:
         """
         Handle tool calls in the assistant message.
@@ -202,9 +227,11 @@ class EdenAIChat(Model):
             Dict[str, Any]: The raw response from the EdenAI API.
         """
         headers = {"Authorization": f"Bearer {self.api_key}"}
+        optional_params = self._set_optional_params()
         payload = {
             "providers": [self.name],
             "text": self.format_messages(messages),
+            **optional_params
         }
         if self.tools:
             function_tools = self.convert_tools_to_api_format(self.tools)
@@ -377,9 +404,11 @@ class EdenAIChat(Model):
             Dict[str, Any]: The raw response from the EdenAI API.
         """
         headers = {"Authorization": f"Bearer {self.api_key}"}
+        optional_params = self._set_optional_params()
         payload = {
             "providers": [self.name],
             "text": self.format_messages(messages),
+            **optional_params
         }
 
         if self.tools:
@@ -490,9 +519,11 @@ class EdenAIChat(Model):
         """
         url = self.base_url + "/stream"
         headers = {"Authorization": f"Bearer {self.api_key}"}
+        optional_params = self._set_optional_params()
         payload = {
             "providers": [self.name],
             "text": self.format_messages(messages),
+            **optional_params
         }
 
         try:
@@ -556,9 +587,11 @@ class EdenAIChat(Model):
         """
         url = self.base_url + "/stream"
         headers = {"Authorization": f"Bearer {self.api_key}"}
+        optional_params = self._set_optional_params()
         payload = {
             "providers": [self.name],
             "text": self.format_messages(messages),
+            **optional_params
         }
 
         try:
