@@ -505,8 +505,6 @@ class EdenAIChat(Model):
         logger.debug("---------- EdenAI Async Response End ----------")
         return model_response
     
-
-
     def invoke_stream(self, messages: List[Message]) -> Iterator[dict]:
         """
         Invoke the EdenAI API with streaming enabled and parse JSON line responses.
@@ -528,16 +526,22 @@ class EdenAIChat(Model):
 
         try:
             response = requests.post(url=url, headers=headers, json=payload, stream=True)
-            response.raise_for_status()
+            if response.status_code != 200:
+                error_text = response.text
+                logger.error(f"EdenAI streaming API error: {response.status_code} - {error_text}")
+                raise ValueError(f"EdenAI streaming API returned status {response.status_code}: {error_text}")
 
             for line in response.iter_lines():
                 if line:
                     try:
                         yield json.loads(line.decode("utf-8"))
                     except json.JSONDecodeError as e:
-                        logger.error(f"Failed to decode JSON line: {line}")
+                        logger.error(f"Failed to decode JSON line: {line}. Error: {e}")
+        except requests.RequestException as e:
+            logger.error(f"Request exception during streaming API request: {e}")
+            raise
         except Exception as e:
-            logger.error(f"Error during streaming API request: {e}")
+            logger.error(f"Unexpected error during streaming API request: {e}")
             raise
 
 
@@ -597,7 +601,12 @@ class EdenAIChat(Model):
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, headers=headers, json=payload) as response:
-                    response.raise_for_status()
+                    if response.status != 200:
+                        # Log the error response body
+                        error_text = await response.text()
+                        logger.error(f"EdenAI streaming API error: {response.status} - {error_text}")
+                        raise ValueError(f"EdenAI streaming API returned status {response.status}: {error_text}")
+
 
                     buffer = "" 
                     async for line in response.content.iter_any():
@@ -614,8 +623,11 @@ class EdenAIChat(Model):
                                         logger.error(f"Failed to decode JSON line: {json_chunk}")
                             except Exception as e:
                                 logger.error(f"Error while processing chunk: {e}")
+        except aiohttp.ClientError as e:
+            logger.error(f"Client error during streaming API request: {e}")
+            raise
         except Exception as e:
-            logger.error(f"Error during streaming API request: {e}")
+            logger.error(f"Unexpected error during streaming API request: {e}")
             raise
 
     async def aresponse_stream(self, messages: List[Message]) -> AsyncIterator[ModelResponse]:
