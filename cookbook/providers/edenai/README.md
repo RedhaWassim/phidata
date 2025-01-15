@@ -1,5 +1,10 @@
 # edenai Cookbook
 
+## EdenAI Platform
+EdenAI is a platform that aggregates and provides access to multiple Large Language Models (LLMs) under a single account. With EdenAI, users can interact with various LLMs from different providers using a unified API. This eliminates the need for managing multiple accounts .
+
+more informations : (https://edenai.co/)
+
 > Note: Fork and clone this repository if needed
 
 ### 1. Create and activate a virtual environment
