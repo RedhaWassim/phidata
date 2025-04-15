@@ -59,7 +59,7 @@ class EdenAIChat(Model):
     max_tokens: Optional[int] = None
     stream: bool = False
     tools: Optional[List[Dict]] = None
-    tool_choice: Optional[str] = "auto"
+
     def _get_request_params(self) -> Dict:
         params = {
             "model": self.name,
@@ -67,12 +67,8 @@ class EdenAIChat(Model):
             "max_tokens": self.max_tokens,
             "stream": self.stream
         }
-        if self.tools is not None:
-            params["tools"] = self.get_tools_for_api()
-            if self.tool_choice is None:
-                params["tool_choice"] = "auto"
-            else:
-                params["tool_choice"] = self.tool_choice
+        if self.tools:
+            params["tools"] = self.tools
         return {k: v for k, v in params.items() if v is not None}
 
     def _format_messages_openai(self, messages: List[Message]) -> List[Dict]:
@@ -248,65 +244,55 @@ class EdenAIChat(Model):
         model_response: ModelResponse,
         tool_role: str = "tool",
     ) -> Optional[ModelResponse]:
-        """
-        Handle tool calls in the assistant message.
+        """Process tool calls in assistant message"""
+        if not assistant_message.tool_calls:
+            return None
 
-        Args:
-            assistant_message (Message): The assistant message.
-            messages (List[Message]): The list of messages.
-            model_response (ModelResponse): The model response.
-            tool_role (str): The role of the tool call. Defaults to "tool".
+        if model_response.content is None:
+            model_response.content = ""
 
-        Returns:
-            Optional[ModelResponse]: The model response after handling tool calls.
-        """
-        if assistant_message.tool_calls is not None and len(assistant_message.tool_calls) > 0 and self.run_tools:
-            if model_response.content is None:
-                model_response.content = ""
-            function_call_results: List[Message] = []
-            function_calls_to_run: List[FunctionCall] = []
-            for tool_call in assistant_message.tool_calls:
-                _tool_call_id = tool_call.get("id")
-                _function_call = get_function_call_for_tool_call(tool_call, self.functions)
-                if _function_call is None:
-                    messages.append(
-                        Message(
-                            role="tool",
-                            tool_call_id=_tool_call_id,
-                            content="Could not find function to call.",
-                        )
-                    )
-                    continue
-                if _function_call.error is not None:
-                    messages.append(
-                        Message(
-                            role="tool",
-                            tool_call_id=_tool_call_id,
-                            content=_function_call.error,
-                        )
-                    )
-                    continue
-                function_calls_to_run.append(_function_call)
+        function_call_results = []
+        function_calls_to_run = []
 
-            if self.show_tool_calls:
-                model_response.content += "\nRunning:"
-                for _f in function_calls_to_run:
-                    model_response.content += f"\n - {_f.get_call_str()}"
-                model_response.content += "\n\n"
+        print("----------")
+        print(assistant_message.tool_calls)
+        print("-----------")
+        
+        for tool_call in assistant_message.tool_calls:
+            function_call = get_function_call_for_tool_call(tool_call, self.tools)
+            
+            if not function_call:
+                messages.append(Message(
+                    role=tool_role,
+                    tool_call_id=tool_call.get("id"),
+                    content="Could not find function to call."
+                ))
+                continue
 
-            for _ in self.run_function_calls(
-                function_calls=function_calls_to_run, function_call_results=function_call_results, tool_role=tool_role
-            ):
-                pass
+            if function_call.error:
+                messages.append(Message(
+                    role=tool_role,
+                    tool_call_id=tool_call.get("id"),
+                    content=function_call.error
+                ))
+                continue
 
-            if len(function_call_results) > 0:
-                print("************")
-                print(function_call_results)
-                print("*********")
-                messages.extend(function_call_results)
+            function_calls_to_run.append(function_call)
 
-            return model_response
-        return None
+        if self.show_tool_calls:
+            model_response.content += "\nTool calls:"
+            for func in function_calls_to_run:
+                model_response.content += f"\n- {func.get_call_str()}"
+            model_response.content += "\n"
+
+        # Execute tool calls
+        for _ in self.run_function_calls(function_calls_to_run, function_call_results):
+            pass
+
+        if function_call_results:
+            messages.extend(function_call_results)
+
+        return model_response
 
     def response(self, messages: List[Message]) -> ModelResponse:
         try:
@@ -321,26 +307,14 @@ class EdenAIChat(Model):
             )
             messages.append(assistant_message)
 
-            # # Handle tool calls if any
-            # if model_response.tool_call:
-            #     response=  self.handle_tool_calls(
-            #         assistant_message=assistant_message,
-            #         messages=messages,
-            #         model_response=model_response
-            #     )
-            #     print(response)
-            #     return response
-            tool_role = "tool"
-            if (
-                self.handle_tool_calls(
+            # Handle tool calls if any
+            if model_response.tool_call:
+                return self.handle_tool_calls(
                     assistant_message=assistant_message,
                     messages=messages,
-                    model_response=model_response,
-                    tool_role=tool_role,
+                    model_response=model_response
                 )
-                is not None
-            ):
-                return self.handle_post_tool_call_messages(messages=messages, model_response=model_response)
+            
             return model_response
             
         except Exception as e:

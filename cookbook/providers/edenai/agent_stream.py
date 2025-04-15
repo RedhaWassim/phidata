@@ -6,7 +6,8 @@ from phi.model.edenai import EdenAIChat
 from phi.tools.yfinance import YFinanceTools
 
 agent = Agent(
-    model=EdenAIChat(name="openai/gpt-4o"),
+    model=EdenAIChat(name="openai/gpt-4o",
+                     api_key = ".."),
     tools=[YFinanceTools(stock_price=True)],
     show_tool_calls=True,
     markdown=True,

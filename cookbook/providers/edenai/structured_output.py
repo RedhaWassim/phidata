@@ -17,7 +17,8 @@ class MovieScript(BaseModel):
 
 
 json_mode_agent = Agent(
-    model=EdenAIChat(name="openai/gpt-4o"),
+    model=EdenAIChat(name="openai/gpt-4o",
+                     api_key = ".."),
     description="You help people write movie scripts.",
     response_model=MovieScript,
     # debug_mode=True,

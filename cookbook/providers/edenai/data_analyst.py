@@ -12,7 +12,7 @@ duckdb_tools.create_table_from_path(
 )
 
 agent = Agent(
-    model=EdenAIChat(name="openai/gpt-4o"),
+    model=EdenAIChat(name="openai/gpt-4", api_key = ".."),
     tools=[duckdb_tools],
     markdown=True,
     show_tool_calls=True,
