@@ -41,7 +41,8 @@ expert_agent = Agent(
     tools=[EdenAITools(enable_call_expert_model=True)],
     instructions=[
         "Call Eden AI expert models with call_expert_model.",
-        "Model strings use the format feature/subfeature/provider, e.g. text/named_entity_recognition/google.",
+        "Model strings use the format feature/subfeature/provider, e.g. text/named_entity_recognition/amazon.",
+        "Pass the language code of the text in the input, e.g. {'text': '...', 'language': 'en'}.",
     ],
     markdown=True,
 )

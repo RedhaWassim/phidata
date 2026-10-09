@@ -512,8 +512,9 @@ class EdenAITools(Toolkit):
         object detection, invoice parsing or web search. Async models (subfeature ending in "_async") are polled.
 
         Args:
-            model (str): Model string "feature/subfeature/provider[/model]", e.g. "text/named_entity_recognition/google".
-            input (dict): Feature specific input, e.g. {"text": "..."} or {"file": "<url or file ID>"}.
+            model (str): Model string "feature/subfeature/provider[/model]", e.g. "text/named_entity_recognition/amazon".
+            input (dict): Feature specific input, e.g. {"text": "...", "language": "en"} or
+                {"file": "<url or file ID>"}. Some providers require a language code.
 
         Returns:
             str: JSON output of the model, or an error message.
@@ -528,8 +529,9 @@ class EdenAITools(Toolkit):
         object detection, invoice parsing or web search. Async models (subfeature ending in "_async") are polled.
 
         Args:
-            model (str): Model string "feature/subfeature/provider[/model]", e.g. "text/named_entity_recognition/google".
-            input (dict): Feature specific input, e.g. {"text": "..."} or {"file": "<url or file ID>"}.
+            model (str): Model string "feature/subfeature/provider[/model]", e.g. "text/named_entity_recognition/amazon".
+            input (dict): Feature specific input, e.g. {"text": "...", "language": "en"} or
+                {"file": "<url or file ID>"}. Some providers require a language code.
 
         Returns:
             str: JSON output of the model, or an error message.
