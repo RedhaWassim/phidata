@@ -53,6 +53,20 @@ JSON object, either at the top level or under `backendResponse`. It decodes
 the base64 once and removes a WAV header when present before producing an
 Agno WAV audio artifact. Incompatible audio formats fail explicitly.
 
+## Eden AI expert models
+
+`edenai_tools.py` uses `EdenAITools` to call Eden AI expert models through the
+V3 Universal AI endpoint: OCR (`extract_text`), translation, moderation,
+text-to-speech, image generation and speech-to-text. Set `EDENAI_API_KEY`; the
+example also runs its agent on an Eden AI LLM (`agno.models.edenai.EdenAI`), so
+no other key is needed.
+
+Each tool uses a configurable model string `feature/subfeature/provider[/model]`
+(see `https://api.edenai.run/v3/info`), with optional per-model `fallbacks`.
+Files are passed as a public URL or as a file ID from `upload_file()`.
+`enable_call_expert_model=True` adds a generic tool that can call any expert
+model; async models (speech-to-text, multipage OCR) are polled until done.
+
 ## Folders
 
 - `finance/` - FinanceTools: one finance toolkit, swappable data providers (yfinance, financialdatasets.ai)
