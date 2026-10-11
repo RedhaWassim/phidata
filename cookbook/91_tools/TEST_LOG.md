@@ -1,5 +1,15 @@
 # Test Log
 
+### edenai_tools.py
+
+**Status:** PASS
+
+**Description:** Agent on an Eden AI LLM (`openai/gpt-5.4-mini`) with `EdenAITools`: OCR of a receipt image then translation, image generation, and named entity recognition through `call_expert_model`. Run live against `https://api.edenai.run/v3` on 2026-10-09.
+
+**Result:** The agent called `extract_text` + `translate_text`, `generate_image` and `call_expert_model(text/named_entity_recognition/amazon)` and answered from the results. The toolkit was also exercised directly, sync and async: moderation, text-to-speech, `upload_file`/`aupload_file` then OCR by file ID, and speech-to-text (async job polling) on the generated audio. Unit tests: `pytest libs/agno/tests/unit/tools/test_edenai.py`.
+
+---
+
 ### sixtydb_tools.py
 
 **Status:** PASS (local HTTP and cookbook checks); live agent run pending
